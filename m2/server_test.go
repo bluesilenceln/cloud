@@ -2,6 +2,7 @@ package m2
 
 import (
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
@@ -25,8 +26,9 @@ func TestHealth(t *testing.T) {
 	testCase := struct {
 		headers map[string]string
 		version string
+		body    []byte
 	}{
-		headers: map[string]string{"test_1": "foo", "test_2": "hoo"}, version: "1.0.0",
+		headers: map[string]string{"test_1": "foo", "test_2": "hoo"}, version: "1.0.0", body: []byte("200"),
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/healthz", nil)
@@ -43,7 +45,7 @@ func TestHealth(t *testing.T) {
 	c := http.Client{}
 	resp, err := c.Do(req)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	for k, v := range testCase.headers {
@@ -54,7 +56,13 @@ func TestHealth(t *testing.T) {
 		}
 	}
 
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	assert.Equal(t, testCase.version, resp.Header.Get("Version"))
+	assert.Equal(t, testCase.body, b)
 
 	s.Stop()
 	wg.Wait()
